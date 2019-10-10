@@ -1,4 +1,4 @@
-package tech.lacambra.hello;
+package hello;
 
 import io.helidon.webserver.Routing;
 import io.helidon.webserver.WebServer;
@@ -13,7 +13,7 @@ public class HelloWorld {
 
     WebServer webServer = WebServer
         .create(Routing.builder()
-            .any((req, res) -> res.send("It works!"))
+            .any((req, res) -> res.send("+"))
             .build())
         .start()
         .toCompletableFuture()

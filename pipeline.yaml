@@ -1,0 +1,105 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: maven-pipeline
+
+parameters:
+  - name: APPLICATION_NAME
+    description: The name assigned to all of the application objects defined in this template.
+    displayName: Application Name
+    required: true
+    value: maven-pipeline
+
+  - name: GIT_SOURCE_URL
+    description: The source URL for the application
+    displayName: Source URL
+    required: true
+    value: http://10.104.204.110:8080/hipps/hipps.git
+
+objects:
+
+  - kind: BuildConfig
+    apiVersion: v1
+
+    metadata:
+      name: ${APPLICATION_NAME}
+    spec:
+      strategy:
+        jenkinsPipelineStrategy:
+          jenkinsfile: |-
+            try {
+              timeout(time: 40, unit: 'MINUTES') {
+                def appName="${APPLICATION_NAME}"
+                def project=""
+
+                gitlabBuilds(builds: ["initialize", "checkout", "build", "test"])
+                {
+                  node {
+                    stage("initialize") {
+                      gitlabCommitStatus("initialize") {
+                        project = env.PROJECT_NAME
+                        branch = env.gitlabSourceBranch
+                        commit = env.gitlabAfter
+
+                        if (commit == null || commit == "") {
+                          commit = env.tag_or_branch
+                        }
+
+                        echo "project name=${project}"
+                        echo "branch=${branch}"
+                        echo "commit=${commit}"
+                      }
+                    }
+                  }
+                  node("maven") {
+                    stage("checkout") {
+                      gitlabCommitStatus("checkout") {
+                        echo "checkout..."
+                        withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                          checkout scm:
+                            [$class: 'GitSCM',
+                            branches: [[name: "${commit}"]],
+                            userRemoteConfigs: [[credentialsId: 'gitlab', url: "${GIT_SOURCE_URL}"]]
+                            ]
+                        }
+                      }
+                    }
+                    stage("build") {
+                      gitlabCommitStatus("build") {
+                        echo "build ..."
+                        sh "env"
+                        sh "mvn clean compile"
+                      }
+                    }
+                    stage("test") {
+                      gitlabCommitStatus("test") {
+                        echo "test..."
+                        //try to execute the test 3 times - but don't let it run for more than 10 minutes
+                        //sometimes the test simply hangs...
+                        retry(count: 3) {
+                          echo "execute test..."
+                          try{
+                            timeout(time: 10, unit: "MINUTES") {
+                              sh "mvn test"
+                            }
+                          }
+                          catch(err) {
+                            script{
+                              error "cought error: ${err}"
+                            }
+                          }
+                        } //retry
+                      } //commit-status
+                    }//stage: test
+                  }
+                }
+              }
+            }
+            catch (err) {
+              echo "in catch block"
+              echo "Caught: ${err}"
+              currentBuild.result = 'FAILURE'
+              throw err
+            }
+
+        type: JenkinsPipeline
