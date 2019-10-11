@@ -9,14 +9,16 @@ pipeline{
 
     stages{
             stage('build') {
-                steps{
-                    sh script: "cd ${applicationName} && mvn -DskipTests clean package"
-                }
-            }
-            stage('build system tests') {
-                steps{
-                    sh script: "cd ${applicationNameST} && mvn clean package"
-                }
+                    steps{
+                         parallel(
+                            app: {
+                                sh script: "cd ${applicationName} && mvn -DskipTests clean package"
+                            },
+                            appSt: {
+                                sh script: "cd ${applicationNameST} && mvn clean package"
+                            }  
+                         )
+                    }
             }
             stage('unit tests') {
                 steps{
