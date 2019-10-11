@@ -1,5 +1,5 @@
 def applicationName = "hello-world-wf";
-def applicationNameST = hello-world-st";
+def applicationNameST = "hello-world-st";
 
 pipeline{
     agent {
