@@ -20,4 +20,4 @@ spec:
       jenkinsfilePath: Jenkinsfile
       env:
         - name: SERVICE_URI
-          value: hello-world-wf.devops.svc:8080
+          value: http://hello-world-wf.devops.svc:8080
