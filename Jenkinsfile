@@ -1,5 +1,6 @@
 def applicationName = "hello-world-wf";
 def applicationNameST = "hello-world-st";
+def applicationWarName = "hello";
 
 pipeline{
     agent {
@@ -33,7 +34,7 @@ pipeline{
                     openshift.withCluster(){
                         openshift.withProject(){
                             def build = openshift.selector("bc", applicationName);
-                            def startedBuild = build.startBuild("--from-file=\"./${applicationName}/target/${applicationName}.war\"");
+                            def startedBuild = build.startBuild("--from-file=\"./${applicationName}/target/${applicationWarName}.war\"");
                             startedBuild.logs('-f');
                             echo "${applicationName} build status: ${startedBuild.object().status}";
                         }
